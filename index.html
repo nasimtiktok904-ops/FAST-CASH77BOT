@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAST CASH - Telegram Mini App</title>
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; margin: 15px auto; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        button { background: #3b82f6; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; margin-top: 10px; width: 100%; }
+        button:active { background: #2563eb; }
+        input { width: 90%; padding: 10px; margin-top: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🔥 FAST CASH 🔥</h2>
+        <p>স্বাগতম, <span id="username">ইউজার</span>!</p>
+        <h3>ব্যালেন্স: <span id="balance">0</span> TK</h3>
+        <p>রেফার সংখ্যা: <span id="referCount">0</span></p>
+    </div>
+
+    <div class="card">
+        <h3>আপনার রেফার লিংক</h3>
+        <input type="text" id="referLink" readonly>
+        <button onclick="copyReferLink()">লিংক কপি করুন</button>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // আপনার ফায়ারবেস আসল কনফিগারেশন
+        const firebaseConfig = {
+          apiKey: "AIzaSyB3z_-UG_Q-x8HpCUGv_aK-d1V",
+          authDomain: "fast-cash-521d1.firebaseapp.com",
+          projectId: "fast-cash-521d1",
+          storageBucket: "fast-cash-521d1.firebasestorage.app",
+          messagingSenderId: "854435436871",
+          appId: "1:854435436871:web:cd29d32194907...",
+          measurementId: "G-P40FXRCD44"
+        };
+
+        // ইনিশিয়ালাইজ ফায়ারবেস
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // টেলিগ্রাম ডাটা ইনিট
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const user = tg.initDataUnsafe?.user;
+        const userId = user ? String(user.id) : "test_user_" + Math.floor(Math.random() * 1000);
+        const userName = user ? (user.first_name || "User") : "Test User";
+
+        document.getElementById("username").innerText = userName;
+
+        // রেফার কোড চেক করা (Telegram Start App Param থেকে)
+        const startParam = tg.initDataUnsafe?.start_param; 
+
+        async function initUser() {
+            const userRef = doc(db, "users", userId);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                let referrerId = null;
+
+                if (startParam && startParam !== userId) {
+                    const referrerRef = doc(db, "users", startParam);
+                    const referrerSnap = await getDoc(referrerRef);
+
+                    if (referrerSnap.exists()) {
+                        referrerId = startParam;
+                        await updateDoc(referrerRef, {
+                            balance: increment(10), // রেফার বোনাস ১০ টাকা
+                            referCount: increment(1)
+                        });
+                    }
+                }
+
+                await setDoc(userRef, {
+                    name: userName,
+                    balance: 5, // সাইন আপ বোনাস ৫ টাকা
+                    referCount: 0,
+                    referrer: referrerId,
+                    createdAt: new Date()
+                });
+
+                document.getElementById("balance").innerText = "5";
+                document.getElementById("referCount").innerText = "0";
+            } else {
+                const userData = userSnap.data();
+                document.getElementById("balance").innerText = userData.balance || 0;
+                document.getElementById("referCount").innerText = userData.referCount || 0;
+            }
+
+            // আপনার টেলিগ্রাম বটের ইউজারনেম এখানে বসাবেন
+            const botUsername = "FAST_ASH77_Bot"; 
+            const refLink = `https://t.me/${botUsername}?start=${userId}`;
+            document.getElementById("referLink").value = refLink;
+        }
+
+        initUser();
+
+        window.copyReferLink = function() {
+            const copyText = document.getElementById("referLink");
+            copyText.select();
+            navigator.clipboard.writeText(copyText.value);
+            alert("রেফার লিংক কপি সফল হয়েছে!");
+        }
+    </script>
+</body>
+</html>
